@@ -66,7 +66,7 @@ int main(int argc, char **argv)
 {
 	if (argc != 2) {
 		printf("Usage: %s <.ppm file>\n", argv[0]);
-		return 1;
+		return -1;
 	}
 
 	Image *img = readData(argv[1]);

@@ -22,14 +22,68 @@
 //and the left column as adjacent to the right column.
 Color *evaluateOneCell(Image *image, int row, int col, uint32_t rule)
 {
-	//YOUR CODE HERE
+	uint32_t rows, cols, center;
+	rows = image->rows;
+	cols = image->cols;
+	center = row * cols + col;
+
+	//read the eight neighbors of the cell
+	int num = 8;
+	int nx[num], ny[num];
+	const int px[] = {-1, -1, -1, 0, 0, 1, 1, 1};
+	const int py[] = {-1, 0, 1, -1, 1, -1, 0, 1};
+
+	for (int i = 0; i < num; i++) {
+		nx[i] = (row + px[i]) % rows; 
+		ny[i] = (col + py[i]) % cols;
+	}
+
+	//determine the color of the given cell
+	int aR, aG, aB;					//alive
+	int aNR = 0, aNG = 0, aNB = 0;  //number of alive neighbours
+
+	aR = (*(image->image + center))->R == 255;
+	aG = (*(image->image + center))->G == 255;
+	aB = (*(image->image + center))->B == 255;
+
+	for (int i = 0; i < num; i++) {
+		Color *neighbor = *(image->image + (nx[i] * cols + ny[i]));
+		aNR += (neighbor->R == 255) ? 1 : 0;
+		aNG += (neighbor->G == 255) ? 1 : 0;
+		aNB += (neighbor->B == 255) ? 1 : 0;
+	}
+
+	//the key part;
+	int shiftR = 9 * aR + aNR;
+	int shiftG = 9 * aG + aNG;
+	int shiftB = 9 * aB + aNB;
+	Color *cell = (Color *)malloc(sizeof(Color));
+
+	cell->R = (rule & (1<<shiftR)) ? 255 : 0; 
+	cell->G = (rule & (1<<shiftG)) ? 255 : 0; 
+	cell->B = (rule & (1<<shiftB)) ? 255 : 0; 
+
+	return cell;
 }
 
 //The main body of Life; given an image and a rule, computes one iteration of the Game of Life.
 //You should be able to copy most of this from steganography.c
 Image *life(Image *image, uint32_t rule)
 {
-	//YOUR CODE HERE
+	Image *nextImg = (Image *)malloc(sizeof(Image));
+	nextImg->rows = image->rows;
+	nextImg->cols = image->cols;
+	nextImg->image = (Color **)malloc(sizeof(Color *) * (nextImg->rows)*(nextImg->cols));
+
+	Color **p = nextImg->image;
+	for (int i = 0; i < nextImg->rows; i++) {
+		for (int j = 0; j < nextImg->cols; j++) {
+			*p = evaluateOneCell(image, i, j, rule);
+			p++;
+		}
+	}
+
+	return nextImg;
 }
 
 /*
@@ -49,5 +103,19 @@ You may find it useful to copy the code from steganography.c, to start.
 */
 int main(int argc, char **argv)
 {
-	//YOUR CODE HERE
+	if (argc != 3) {
+		printf("usage: ./gameOfLife filename rule\n");
+		printf("filename is an ASCII PPM file (type P3) with maximum value 255.\n");
+		printf("rule is a hex number beginning with 0x; Life is 0x1808.\n");
+		return -1;
+	}
+
+	Image *img = readData(argv[1]);
+	uint32_t rule = strtol(argv[2], NULL, 16);
+
+	Image *lifeImg = life(img, rule);
+	writeData(lifeImg);
+	freeImage(img);
+	freeImage(lifeImg);
+	return 0;
 }
